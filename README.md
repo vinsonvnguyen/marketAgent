@@ -11,6 +11,7 @@ cd market-agent
 pip install -r requirements.txt
 cp .env.example .env          # fill in your keys
 python agent.py               # runs and scans every 30 min
+testing push
 ```
 
 ---
