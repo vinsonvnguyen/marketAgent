@@ -1,0 +1,62 @@
+name: Market News Agent
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # every 30 minutes
+  workflow_dispatch:           # lets you trigger manually from GitHub UI
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Restore seen alerts cache
+        uses: actions/cache@v4
+        with:
+          path: seen_alerts.json
+          key: seen-alerts-cache
+          restore-keys: seen-alerts-cache
+
+      - name: Install dependencies
+        run: pip install anthropic requests schedule python-dotenv
+
+      - name: Run agent (single scan)
+        env:
+          # ── Required ──────────────────────────────────────────
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # ── Notifications (add whichever you use) ─────────────
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
+          SENDGRID_API_KEY:    ${{ secrets.SENDGRID_API_KEY }}
+          EMAIL_FROM:          ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO:            ${{ secrets.EMAIL_TO }}
+          SMTP_USER:           ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD:       ${{ secrets.SMTP_PASSWORD }}
+          TWILIO_ACCOUNT_SID:  ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN:   ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM_NUMBER:  ${{ secrets.TWILIO_FROM_NUMBER }}
+          TWILIO_TO_NUMBER:    ${{ secrets.TWILIO_TO_NUMBER }}
+
+          # ── Agent settings (tweak here or move to repo Variables) ──
+          WATCHLIST:           ${{ vars.WATCHLIST || 'AAPL,NVDA,TSLA,Fed rates,semiconductors' }}
+          SENSITIVITY:         ${{ vars.SENSITIVITY || 'medium' }}
+          MIN_IMPACT:          ${{ vars.MIN_IMPACT || 'medium' }}
+          MARKET_HOURS_ONLY:   ${{ vars.MARKET_HOURS_ONLY || 'true' }}
+
+        run: python agent.py
+
+      - name: Save seen alerts cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: seen_alerts.json
+          key: seen-alerts-cache
